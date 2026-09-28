@@ -1,0 +1,121 @@
+# Fill this in with your own details, then commit it to your repo.
+# It's not a secret file (no API keys go here) but it does drive what
+# Claude scores posts against and how it writes drafts.
+
+product:
+  name: Reddit lead generator
+  description: >
+    Strategy Navigator is the AI engine behind Multiverz’s strategy consulting. It helps teams understand a problem, explore possible solutions, see how different people may respond, and check their thinking before moving forward. It turns this work into a structured report that can be presented to and use by a board or client.
+
+  brand_voice: >
+    Practitioner to practitioner, plain words, the way you'd explain it to a friend outside the field. Answer first. The reply must be useful even if SN is never mentioned. One-sentence disclosure whenever the company is mentioned.Problems are located in how strategy is usually done, never in the person asking. No hype words, em dashes, emoji, pricing, timelines, or client names.
+
+# Subreddits to watch 
+# Reddit now requires manual API approval -- if you don't have credentials yet,
+# set this to `subreddits: []` and the scan runs on the other sources only.
+subreddits: []
+#  - "SaaS"
+#  - "Entrepreneur"
+#  - "micro_saas"
+#  - "EntrepreneurRideAlong"
+#  - "consulting"
+#  - "ceo"
+#  - "advancedentrepreneur"
+#  - "RedditforBusiness"
+
+# Search terms run against each subreddit above. Keep these to phrases
+# people would actually type when they have the problem you solve, not
+# your product's name.
+keywords:
+  - "looking for a tool"
+  - "does anyone know a"
+  - "go-to-market strategy"
+  - "GTM plan"
+  - "launch strategy"
+  - "market entry"
+  - "positioning"
+  - "ideal customer profile"
+  - "where do I even start with marketing," 
+  - "no traction after launch"
+  - "pivot"
+  - "pricing strategy"
+  - "client strategy deck"
+  - "strategy deliverable" 
+  - "research for a client" 
+  - "competitive analysis workload"
+  - "scenario planning"
+  - "scaling a solo consultancy"
+  - "AI for consulting"
+
+# Which model does the scoring and drafting: "claude" or "deepseek".
+# Same pipeline either way -- switch any time, no code changes needed.
+# Claude: higher quality, ~$10-15/month at normal volume.
+# DeepSeek: ~10x cheaper per token, but double-check its JSON output holds up
+# for your posts before relying on it unattended (see the README).
+llm_provider: claude
+
+# Substack publications to watch, by their official public RSS feed.
+# Every Substack publication has one for free at <publication-url>/feed --
+# no API key needed. This only works for newsletters you name here; there's
+# no way to search all of Substack the way we search Reddit.
+substack_feeds:
+  - name: "AI as Normal Technology"
+    url: "https://www.normaltech.ai/"
+  - name: "interweave.gov"
+    url: "https://interweavegov.substack.com/"
+  - name: "Beyond the Status Quo: Leading Public Transformation"
+    url: "https://aaronpercival.substack.com/"
+  - name: "Can We Still Govern?"
+    url: "https://donmoynihan.substack.com/"
+  - name: "Platforms, AI, and the Economics of BigTech"
+    url: "https://platforms.substack.com/"  
+  - name: "GTM Strategist"
+    url: "https://knowledge.gtmstrategist.com/"
+  - name: "The Strategy Stack"
+    url: "https://thestrategystack.substack.com/"
+  - name: "The Digital Leader"
+    url: "https://thedigitalleader.substack.com/"
+  - name: "The Founders Corner"
+    url: "https://www.the-founders-corner.com/"
+  - name: "Import AI"
+    url: "https://importai.substack.com/"
+  - name: "State of AI"
+    url: "https://nathanbenaich.substack.com/"
+  - name: "AI Policy Bulletin"
+    url: "https://newsletter.aipolicybulletin.org/"
+
+
+# Hacker News search terms (official free Algolia API, no key needed).
+# Searches new stories, Show HN and Ask HN posts. Leave empty to skip HN.
+hackernews_keywords:
+  - "looking for a tool"
+  - "alternative to"
+  - "does anyone know a"
+  - "go-to-market strategy"
+  - "GTM plan"
+  - "launch strategy"
+  - "market entry"
+  - "positioning"
+  - "ideal customer profile"
+  - "where do I even start with marketing," 
+  - "no traction after launch"
+  - "pivot"
+  - "pricing strategy"
+  - "client strategy deck"
+  - "strategy deliverable" 
+  - "research for a client" 
+  - "competitive analysis workload"
+  - "scenario planning"
+  - "scaling a solo consultancy"
+  - "AI for consulting"
+
+# Only posts scoring at or above this get a drafted reply (0-100).
+# Everything below still gets stored and scored, just no draft written,
+# to keep Claude API cost down.
+score_threshold: 50
+
+# How many posts to pull per keyword search, per subreddit, per run.
+posts_per_subreddit: 25
+
+# Only consider posts newer than this many hours (avoids re-scoring old threads).
+lookback_hours: 30
