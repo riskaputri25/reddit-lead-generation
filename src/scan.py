@@ -81,17 +81,30 @@ def main() -> None:
 
     new_leads_today = []
 
-    for candidate in gather_candidates(settings, config):
+    candidates = gather_candidates(settings, config)
+    fetched = {}
+    for c in candidates:
+        fetched[c["source_type"]] = fetched.get(c["source_type"], 0) + 1
+    print(f"[scan] fetched from sources: {fetched or 'nothing'}")
+
+    already_seen = 0
+    scored = []
+
+    for candidate in candidates:
         if lead_exists(conn, candidate["external_id"]):
+            already_seen += 1
             continue
 
         try:
-            result = scorer.score_post(product_desc, candidate["title"], candidate["body"])
+            result = scorer.score_post(
+                product_desc, candidate["title"], candidate["body"], candidate["source_type"]
+            )
         except Exception as e:  # noqa: BLE001
             print(f"[scan] scoring failed for {candidate['external_id']}: {e}")
             continue
 
         score = result.get("score", 0)
+        scored.append(score)
         reasoning = result.get("reason", "")
         draft_reply = None
         self_promo_allowed = None
@@ -104,6 +117,7 @@ def main() -> None:
                     candidate["title"],
                     candidate["body"],
                     source_label(candidate),
+                    candidate["source_type"],
                 )
                 draft_reply = draft.get("draft_reply")
                 self_promo_allowed = draft.get("self_promo_allowed")
@@ -126,6 +140,8 @@ def main() -> None:
         send_digest(settings.smtp_user, settings.smtp_pass, settings.digest_to, new_leads_today)
 
     conn.close()
+    top = sorted(scored, reverse=True)[:5]
+    print(f"[scan] new posts scored: {len(scored)}, already seen: {already_seen}, top scores: {top}")
     print(f"[scan] complete. {len(new_leads_today)} lead(s) above threshold.")
 
 
