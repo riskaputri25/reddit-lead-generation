@@ -35,7 +35,7 @@ keywords:
   - "market entry"
   - "positioning"
   - "ideal customer profile"
-  - "where do I even start with marketing," 
+  - "where do I even start with marketing" 
   - "no traction after launch"
   - "pivot"
   - "pricing strategy"
@@ -47,12 +47,7 @@ keywords:
   - "scaling a solo consultancy"
   - "AI for consulting"
 
-# Which model does the scoring and drafting: "claude" or "deepseek".
-# Same pipeline either way -- switch any time, no code changes needed.
-# Claude: higher quality, ~$10-15/month at normal volume.
-# DeepSeek: ~10x cheaper per token, but double-check its JSON output holds up
-# for your posts before relying on it unattended (see the README).
-llm_provider: claude
+llm_provider: deepseek
 
 # Substack publications to watch, by their official public RSS feed.
 # Every Substack publication has one for free at <publication-url>/feed --
