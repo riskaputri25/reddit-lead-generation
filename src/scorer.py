@@ -19,6 +19,25 @@ self-promotion versus something better said as a low-key direct message \
 instead. Reply with ONLY a JSON object, no markdown fences, no other text: \
 {"draft_reply": "<the reply text>", "self_promo_allowed": <true|false>}"""
 
+# Substack items are published articles, not people asking for help, so they
+# get a different rubric: "is this a good place for a useful comment?"
+SCORE_SYSTEM_ARTICLE = """You judge whether a published newsletter article is a \
+good place for a thoughtful comment that could reach the product's likely \
+buyers. Score 0-100: 0 means unrelated to the problem the product addresses; \
+100 means the article is squarely about that problem, its readers look like \
+the target buyers, and there is room to add a useful, non-promotional \
+perspective. Reply with ONLY a JSON object, no markdown fences, no other \
+text: {"score": <integer 0-100>, "reason": "<one sentence>"}"""
+
+DRAFT_SYSTEM_ARTICLE = """You write a short comment to leave under a newsletter \
+article, in the voice described. It must respond to a specific point the \
+article makes and add a genuinely useful insight or experience. Mention the \
+product only if it truly fits the point being made; otherwise leave it out \
+entirely. No generic praise. Also judge whether mentioning the product here \
+would read as welcome or as promotional. Reply with ONLY a JSON object, no \
+markdown fences, no other text: \
+{"draft_reply": "<the comment text>", "self_promo_allowed": <true|false>}"""
+
 CLAUDE_SCORE_MODEL = "claude-haiku-4-5-20251001"
 CLAUDE_DRAFT_MODEL = "claude-sonnet-5"
 DEEPSEEK_MODEL = "deepseek-chat"
@@ -49,16 +68,19 @@ class Scorer:
                 f"Unknown llm_provider '{provider}' in config.yaml -- use 'claude' or 'deepseek'."
             )
 
-    def score_post(self, product_description: str, post_title: str, post_body: str) -> dict:
+    def score_post(
+        self, product_description: str, post_title: str, post_body: str, source_type: str = "reddit"
+    ) -> dict:
         prompt = (
             f"Product:\n{product_description}\n\n"
             f"Reddit post title: {post_title}\n"
             f"Reddit post body: {post_body[:1500]}"
         )
         default = {"score": 0, "reason": "parse failure"}
+        system = SCORE_SYSTEM_ARTICLE if source_type == "substack" else SCORE_SYSTEM
         if self.provider == "deepseek":
-            return self._call_deepseek(DEEPSEEK_MODEL, SCORE_SYSTEM, prompt, 150, default)
-        return self._call_claude(CLAUDE_SCORE_MODEL, SCORE_SYSTEM, prompt, 150, default)
+            return self._call_deepseek(DEEPSEEK_MODEL, system, prompt, 150, default)
+        return self._call_claude(CLAUDE_SCORE_MODEL, system, prompt, 150, default)
 
     def draft_reply(
         self,
@@ -67,6 +89,7 @@ class Scorer:
         post_title: str,
         post_body: str,
         source_label: str,
+        source_type: str = "reddit",
     ) -> dict:
         prompt = (
             f"Product:\n{product_description}\n\n"
@@ -76,9 +99,10 @@ class Scorer:
             f"Post body: {post_body[:1500]}"
         )
         default = {"draft_reply": None, "self_promo_allowed": None}
+        system = DRAFT_SYSTEM_ARTICLE if source_type == "substack" else DRAFT_SYSTEM
         if self.provider == "deepseek":
-            return self._call_deepseek(DEEPSEEK_MODEL, DRAFT_SYSTEM, prompt, 400, default)
-        return self._call_claude(CLAUDE_DRAFT_MODEL, DRAFT_SYSTEM, prompt, 400, default)
+            return self._call_deepseek(DEEPSEEK_MODEL, system, prompt, 400, default)
+        return self._call_claude(CLAUDE_DRAFT_MODEL, system, prompt, 400, default)
 
     def _call_claude(self, model: str, system: str, prompt: str, max_tokens: int, default: dict) -> dict:
         msg = self.client.messages.create(
