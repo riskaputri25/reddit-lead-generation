@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reddit Lead Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #14161c;
+    --panel: #1d2029;
+    --border: #2b2f3a;
+    --text: #e7e6e2;
+    --muted: #8c8f9a;
+    --high: #d9a441;
+    --mid: #7fa88a;
+    --low: #565b68;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.5;
+  }
+  header {
+    padding: 28px 24px 16px;
+    max-width: 780px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .sub { color: var(--muted); font-size: 0.85rem; }
+  nav {
+    display: flex;
+    gap: 4px;
+    margin-top: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  nav a.active {
+    color: var(--text);
+    border-bottom-color: var(--high);
+  }
+  main {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 8px 24px 60px;
+  }
+  .lead {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 18px;
+    margin-top: 14px;
+    background: var(--panel);
+  }
+  .lead-top {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .score {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 0.85rem;
+    padding: 1px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .score.high { color: var(--high); border-color: var(--high); }
+  .score.mid { color: var(--mid); border-color: var(--mid); }
+  .score.low { color: var(--low); border-color: var(--low); }
+  .subreddit {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .title {
+    font-weight: 500;
+    margin: 8px 0 4px;
+  }
+  .title a { color: var(--text); text-decoration: none; }
+  .title a:hover { text-decoration: underline; }
+  .reasoning {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+  }
+  .promo-flag {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 90px;
+    background: #11131a;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 10px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.9rem;
+    resize: vertical;
+  }
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  button, .copy-btn {
+    font-family: inherit;
+    font-size: 0.8rem;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  button:hover, .copy-btn:hover { border-color: var(--muted); }
+  button.primary { border-color: var(--high); color: var(--high); }
+  .empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 60px 0;
+    font-size: 0.9rem;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Reddit Lead Finder</h1>
+  <div class="sub">{{ leads|length }} lead(s) shown</div>
+  <nav>
+    <a href="/?status=new" class="{{ 'active' if status_filter == 'new' }}">New</a>
+    <a href="/?status=replied" class="{{ 'active' if status_filter == 'replied' }}">Replied</a>
+    <a href="/?status=skipped" class="{{ 'active' if status_filter == 'skipped' }}">Skipped</a>
+    <a href="/?status=all" class="{{ 'active' if status_filter == 'all' }}">All</a>
+  </nav>
+</header>
+<main>
+  {% if not leads %}
+    <div class="empty">Nothing here. Check back after the next scan runs.</div>
+  {% endif %}
+
+  {% for lead in leads %}
+  <div class="lead">
+    <div class="lead-top">
+      <span class="score {{ 'high' if lead.score >= 80 else ('mid' if lead.score >= 60 else 'low') }}">{{ lead.score }}</span>
+      <span class="subreddit">{{ ('r/' ~ lead.source_name) if lead.source_type == 'reddit' else lead.source_name }}</span>
+    </div>
+    <div class="title"><a href="{{ lead.url }}" target="_blank" rel="noopener">{{ lead.title }}</a></div>
+    {% if lead.reasoning %}<div class="reasoning">{{ lead.reasoning }}</div>{% endif %}
+    {% if lead.self_promo_allowed is not none %}
+      <div class="promo-flag">
+        {{ "Public reply looks fine here." if lead.self_promo_allowed else "Rules/tone suggest a DM instead of a public mention." }}
+      </div>
+    {% endif %}
+
+    {% if lead.draft_reply %}
+    <form method="post" action="/leads/{{ lead.id }}/update?status={{ status_filter }}">
+      <textarea name="draft_reply" id="draft-{{ lead.id }}">{{ lead.draft_reply }}</textarea>
+      <div class="actions">
+        <button type="button" class="copy-btn" onclick="copyDraft({{ lead.id }})">Copy</button>
+        <button type="submit" class="primary">Save edit</button>
+        <button type="submit" name="status" value="replied">Mark replied</button>
+        <button type="submit" name="status" value="skipped">Skip</button>
+      </div>
+    </form>
+    {% else %}
+    <form method="post" action="/leads/{{ lead.id }}/update?status={{ status_filter }}">
+      <div class="actions">
+        <button type="submit" name="status" value="skipped">Skip</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</main>
+<script>
+  function copyDraft(id) {
+    const el = document.getElementById('draft-' + id);
+    navigator.clipboard.writeText(el.value);
+  }
+</script>
+</body>
+</html>
