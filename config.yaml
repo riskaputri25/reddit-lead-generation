@@ -88,26 +88,14 @@ substack_feeds:
 # Hacker News search terms (official free Algolia API, no key needed).
 # Searches new stories, Show HN and Ask HN posts. Leave empty to skip HN.
 hackernews_keywords:
-  - "looking for a tool"
-  - "alternative to"
-  - "does anyone know a"
-  - "go-to-market strategy"
-  - "GTM plan"
-  - "launch strategy"
-  - "market entry"
-  - "positioning"
-  - "ideal customer profile"
-  - "where do I even start with marketing," 
-  - "no traction after launch"
-  - "pivot"
-  - "pricing strategy"
-  - "client strategy deck"
-  - "strategy deliverable" 
-  - "research for a client" 
-  - "competitive analysis workload"
-  - "scenario planning"
-  - "scaling a solo consultancy"
+  - "consulting"
+  - "business strategy"
+  - "strategy consultant"
+  - "market research"
+  - "competitive analysis"
   - "AI for consulting"
+  - "AI for business"
+  - "GTM strategy"
 
 # Only posts scoring at or above this get a drafted reply (0-100).
 # Everything below still gets stored and scored, just no draft written,
