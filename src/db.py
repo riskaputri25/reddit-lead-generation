@@ -18,11 +18,13 @@ def insert_lead(conn, lead: dict) -> None:
             """
             insert into leads
               (source_type, source_name, external_id, title, body, url, author,
-               created_utc, score, reasoning, self_promo_allowed, draft_reply, status)
+               created_utc, score, reasoning, self_promo_allowed, draft_reply,
+               mode, theme, second_use, status)
             values
               (%(source_type)s, %(source_name)s, %(external_id)s, %(title)s, %(body)s,
                %(url)s, %(author)s, to_timestamp(%(created_utc)s), %(score)s,
-               %(reasoning)s, %(self_promo_allowed)s, %(draft_reply)s, 'new')
+               %(reasoning)s, %(self_promo_allowed)s, %(draft_reply)s,
+               %(mode)s, %(theme)s, %(second_use)s, 'new')
             on conflict (external_id) do nothing
             """,
             lead,
@@ -30,12 +32,18 @@ def insert_lead(conn, lead: dict) -> None:
     conn.commit()
 
 
-def fetch_leads(conn, status: str | None = None):
+def fetch_leads(conn, status: str | None = None, mode: str | None = None):
     query = "select * from leads"
-    params: tuple = ()
+    clauses = []
+    params: list = []
     if status:
-        query += " where status = %s"
-        params = (status,)
+        clauses.append("status = %s")
+        params.append(status)
+    if mode:
+        clauses.append("mode = %s")
+        params.append(mode)
+    if clauses:
+        query += " where " + " and ".join(clauses)
     query += " order by score desc, scanned_at desc"
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(query, params)
