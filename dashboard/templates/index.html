@@ -17,6 +17,7 @@
     --high: #d9a441;
     --mid: #7fa88a;
     --low: #565b68;
+    --signal: #6f9bd9;
   }
   * { box-sizing: border-box; }
   body {
@@ -43,6 +44,7 @@
     gap: 4px;
     margin-top: 18px;
     border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
   }
   nav a {
     color: var(--muted);
@@ -56,6 +58,9 @@
     color: var(--text);
     border-bottom-color: var(--high);
   }
+  nav a.signals-tab.active {
+    border-bottom-color: var(--signal);
+  }
   main {
     max-width: 780px;
     margin: 0 auto;
@@ -68,6 +73,7 @@
     margin-top: 14px;
     background: var(--panel);
   }
+  .lead.signal { border-left: 3px solid var(--signal); }
   .lead-top {
     display: flex;
     align-items: baseline;
@@ -105,6 +111,19 @@
     font-size: 0.75rem;
     color: var(--muted);
     margin-bottom: 8px;
+  }
+  .signal-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .pill {
+    font-size: 0.75rem;
+    color: var(--signal);
+    border: 1px solid var(--signal);
+    border-radius: 20px;
+    padding: 2px 10px;
   }
   textarea {
     width: 100%;
@@ -147,49 +166,76 @@
 <body>
 <header>
   <h1>Reddit Lead Finder</h1>
-  <div class="sub">{{ leads|length }} lead(s) shown</div>
+  <div class="sub">{{ leads|length }} item(s) shown</div>
   <nav>
-    <a href="/?status=new" class="{{ 'active' if status_filter == 'new' }}">New</a>
-    <a href="/?status=replied" class="{{ 'active' if status_filter == 'replied' }}">Replied</a>
-    <a href="/?status=skipped" class="{{ 'active' if status_filter == 'skipped' }}">Skipped</a>
-    <a href="/?status=all" class="{{ 'active' if status_filter == 'all' }}">All</a>
+    <a href="/?view=leads&status=new" class="{{ 'active' if view == 'leads' and status_filter == 'new' }}">New</a>
+    <a href="/?view=leads&status=replied" class="{{ 'active' if view == 'leads' and status_filter == 'replied' }}">Replied</a>
+    <a href="/?view=leads&status=skipped" class="{{ 'active' if view == 'leads' and status_filter == 'skipped' }}">Skipped</a>
+    <a href="/?view=leads&status=all" class="{{ 'active' if view == 'leads' and status_filter == 'all' }}">All</a>
+    <a href="/?view=signals" class="signals-tab {{ 'active' if view == 'signals' }}">Signals</a>
   </nav>
 </header>
 <main>
   {% if not leads %}
-    <div class="empty">Nothing here. Check back after the next scan runs.</div>
+    <div class="empty">
+      {% if view == 'signals' %}
+        No signals yet. Publication feeds get checked on the next scan.
+      {% else %}
+        Nothing here. Check back after the next scan runs.
+      {% endif %}
+    </div>
   {% endif %}
 
   {% for lead in leads %}
-  <div class="lead">
+  <div class="lead {{ 'signal' if lead.mode == 'signal' }}">
     <div class="lead-top">
       <span class="score {{ 'high' if lead.score >= 80 else ('mid' if lead.score >= 60 else 'low') }}">{{ lead.score }}</span>
-      <span class="subreddit">{{ ('r/' ~ lead.source_name) if lead.source_type == 'reddit' else lead.source_name }}</span>
+      <span class="subreddit">
+        {% if lead.source_type == 'reddit' %}r/{{ lead.source_name }}
+        {% elif lead.source_type == 'bluesky' %}Bluesky
+        {% elif lead.source_type == 'hackernews' %}Hacker News
+        {% else %}{{ lead.source_name }}
+        {% endif %}
+      </span>
     </div>
     <div class="title"><a href="{{ lead.url }}" target="_blank" rel="noopener">{{ lead.title }}</a></div>
     {% if lead.reasoning %}<div class="reasoning">{{ lead.reasoning }}</div>{% endif %}
-    {% if lead.self_promo_allowed is not none %}
-      <div class="promo-flag">
-        {{ "Public reply looks fine here." if lead.self_promo_allowed else "Rules/tone suggest a DM instead of a public mention." }}
-      </div>
-    {% endif %}
 
-    {% if lead.draft_reply %}
-    <form method="post" action="/leads/{{ lead.id }}/update?status={{ status_filter }}">
-      <textarea name="draft_reply" id="draft-{{ lead.id }}">{{ lead.draft_reply }}</textarea>
-      <div class="actions">
-        <button type="button" class="copy-btn" onclick="copyDraft({{ lead.id }})">Copy</button>
-        <button type="submit" class="primary">Save edit</button>
-        <button type="submit" name="status" value="replied">Mark replied</button>
-        <button type="submit" name="status" value="skipped">Skip</button>
+    {% if lead.mode == 'signal' %}
+      <div class="signal-meta">
+        {% if lead.theme %}<span class="pill">{{ lead.theme }}</span>{% endif %}
+        {% if lead.second_use %}<span class="pill">{{ lead.second_use }}</span>{% endif %}
       </div>
-    </form>
+      <form method="post" action="/leads/{{ lead.id }}/update?status={{ status_filter }}&view={{ view }}">
+        <div class="actions">
+          <button type="submit" name="status" value="replied">Mark reviewed</button>
+          <button type="submit" name="status" value="skipped">Skip</button>
+        </div>
+      </form>
     {% else %}
-    <form method="post" action="/leads/{{ lead.id }}/update?status={{ status_filter }}">
-      <div class="actions">
-        <button type="submit" name="status" value="skipped">Skip</button>
-      </div>
-    </form>
+      {% if lead.self_promo_allowed is not none %}
+        <div class="promo-flag">
+          {{ "Public reply looks fine here." if lead.self_promo_allowed else "Rules/tone suggest a DM instead of a public mention." }}
+        </div>
+      {% endif %}
+
+      {% if lead.draft_reply %}
+      <form method="post" action="/leads/{{ lead.id }}/update?status={{ status_filter }}&view={{ view }}">
+        <textarea name="draft_reply" id="draft-{{ lead.id }}">{{ lead.draft_reply }}</textarea>
+        <div class="actions">
+          <button type="button" class="copy-btn" onclick="copyDraft({{ lead.id }})">Copy</button>
+          <button type="submit" class="primary">Save edit</button>
+          <button type="submit" name="status" value="replied">Mark replied</button>
+          <button type="submit" name="status" value="skipped">Skip</button>
+        </div>
+      </form>
+      {% else %}
+      <form method="post" action="/leads/{{ lead.id }}/update?status={{ status_filter }}&view={{ view }}">
+        <div class="actions">
+          <button type="submit" name="status" value="skipped">Skip</button>
+        </div>
+      </form>
+      {% endif %}
     {% endif %}
   </div>
   {% endfor %}
