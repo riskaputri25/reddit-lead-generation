@@ -3,18 +3,21 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from src.bluesky_client import fetch_new_posts as fetch_bluesky_posts  # noqa: E402
 from src.config import load_config, load_settings  # noqa: E402
 from src.db import get_conn, insert_lead, lead_exists  # noqa: E402
 from src.digest_email import send_digest  # noqa: E402
 from src.hn_client import fetch_new_stories as fetch_hn_stories  # noqa: E402
 from src.normalize import (  # noqa: E402
+    normalize_bluesky_post,
     normalize_hn_hit,
+    normalize_publication_entry,
     normalize_reddit_post,
     normalize_substack_entry,
 )
 from src.reddit_client import get_reddit, search_subreddit  # noqa: E402
 from src.scorer import Scorer  # noqa: E402
-from src.substack_client import fetch_new_entries as fetch_substack_entries  # noqa: E402
+from src.substack_client import fetch_new_entries as fetch_feed_entries  # noqa: E402
 
 
 def source_label(candidate: dict) -> str:
@@ -22,6 +25,10 @@ def source_label(candidate: dict) -> str:
         return f"r/{candidate['source_name']} (Reddit)"
     if candidate["source_type"] == "hackernews":
         return "Hacker News"
+    if candidate["source_type"] == "bluesky":
+        return "Bluesky"
+    if candidate["source_type"] == "publication":
+        return f"{candidate['source_name']} (publication, signal only)"
     return f"{candidate['source_name']} (Substack)"
 
 
@@ -32,6 +39,7 @@ def gather_candidates(settings, config) -> list:
     of this function needs to change."""
     candidates = []
     lookback_hours = config.get("lookback_hours", 30)
+    posts_per_query = config.get("posts_per_subreddit", 25)
 
     subreddits = config.get("subreddits") or []
     if subreddits:
@@ -41,14 +49,14 @@ def gather_candidates(settings, config) -> list:
                 reddit,
                 subreddit_name,
                 config["keywords"],
-                limit=config.get("posts_per_subreddit", 25),
+                limit=posts_per_query,
                 lookback_hours=lookback_hours,
             )
             candidates.extend(normalize_reddit_post(p, subreddit_name) for p in posts)
 
     substack_feeds = config.get("substack_feeds") or []
     for feed in substack_feeds:
-        entries = fetch_substack_entries(feed["url"], lookback_hours=lookback_hours)
+        entries = fetch_feed_entries(feed["url"], lookback_hours=lookback_hours)
         candidates.extend(normalize_substack_entry(e, feed["name"]) for e in entries)
 
     hn_keywords = config.get("hackernews_keywords") or []
@@ -56,9 +64,24 @@ def gather_candidates(settings, config) -> list:
         hits = fetch_hn_stories(
             hn_keywords,
             lookback_hours=lookback_hours,
-            max_results_per_query=config.get("posts_per_subreddit", 25),
+            max_results_per_query=posts_per_query,
+            exclude_terms=config.get("hackernews_exclude"),
         )
         candidates.extend(normalize_hn_hit(h) for h in hits)
+
+    bluesky_keywords = config.get("bluesky_keywords") or []
+    if bluesky_keywords:
+        posts = fetch_bluesky_posts(
+            bluesky_keywords,
+            lookback_hours=lookback_hours,
+            max_results_per_query=posts_per_query,
+        )
+        candidates.extend(normalize_bluesky_post(p) for p in posts)
+
+    publication_feeds = config.get("publication_feeds") or []
+    for feed in publication_feeds:
+        entries = fetch_feed_entries(feed["url"], lookback_hours=lookback_hours)
+        candidates.extend(normalize_publication_entry(e, feed["name"]) for e in entries)
 
     return candidates
 
@@ -95,6 +118,8 @@ def main() -> None:
             already_seen += 1
             continue
 
+        is_signal = candidate["source_type"] == "publication"
+
         try:
             result = scorer.score_post(
                 product_desc, candidate["title"], candidate["body"], candidate["source_type"]
@@ -106,10 +131,14 @@ def main() -> None:
         score = result.get("score", 0)
         scored.append(score)
         reasoning = result.get("reason", "")
+        theme = result.get("theme") if is_signal else None
+        second_use = result.get("second_use") if is_signal else None
         draft_reply = None
         self_promo_allowed = None
 
-        if score >= threshold:
+        # Signal-mode items (publication feeds) never get a drafted reply --
+        # they're logged for you to read, not a place to comment.
+        if score >= threshold and not is_signal:
             try:
                 draft = scorer.draft_reply(
                     product_desc,
@@ -130,6 +159,9 @@ def main() -> None:
             "reasoning": reasoning,
             "self_promo_allowed": self_promo_allowed,
             "draft_reply": draft_reply,
+            "mode": "signal" if is_signal else "reply",
+            "theme": theme,
+            "second_use": second_use,
         }
         insert_lead(conn, lead)
 
