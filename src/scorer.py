@@ -3,13 +3,13 @@ import json
 import anthropic
 from openai import OpenAI
 
-SCORE_SYSTEM = """You score how good a lead a Reddit post is for a product. \
+SCORE_SYSTEM = """You score how good a lead a post is for a product. \
 Score 0-100: 0 means completely irrelevant, 100 means the poster is \
 describing exactly the problem the product solves and seems ready to hear \
 about a solution. Reply with ONLY a JSON object, no markdown fences, no \
 other text: {"score": <integer 0-100>, "reason": "<one sentence>"}"""
 
-DRAFT_SYSTEM = """You write a short, genuinely useful Reddit reply to a post, \
+DRAFT_SYSTEM = """You write a short, genuinely useful reply to a post, \
 in the voice described, that naturally mentions a product where it's \
 actually relevant to what the poster asked. Prioritize being helpful over \
 being promotional -- a reply that only sells will get removed by moderators \
@@ -37,6 +37,20 @@ entirely. No generic praise. Also judge whether mentioning the product here \
 would read as welcome or as promotional. Reply with ONLY a JSON object, no \
 markdown fences, no other text: \
 {"draft_reply": "<the comment text>", "self_promo_allowed": <true|false>}"""
+
+# Publication-feed items (GovInsider, Apolitical, etc.) are not places to
+# reply at all -- they're signal to log. No draft is ever written for these.
+SCORE_SYSTEM_SIGNAL = """You judge whether a published article from a \
+public-sector, policy, or industry publication is a useful signal for a \
+strategy-and-AI consulting practice to know about. This is NOT about \
+whether to reply -- these articles are not comment threads. Score 0-100: \
+0 means irrelevant; 100 means the article describes something the \
+practice could act on -- an institution moving on a relevant initiative, a \
+policy shift, or evidence the market is validating the practice's category. \
+Reply with ONLY a JSON object, no markdown fences, no other text: \
+{"score": <integer 0-100>, "reason": "<one sentence>", \
+"theme": "<short label for the theme, a few words>", \
+"second_use": "<one of: outreach signal, content angle, background context>"}"""
 
 CLAUDE_SCORE_MODEL = "claude-haiku-4-5-20251001"
 CLAUDE_DRAFT_MODEL = "claude-sonnet-5"
@@ -73,14 +87,23 @@ class Scorer:
     ) -> dict:
         prompt = (
             f"Product:\n{product_description}\n\n"
-            f"Reddit post title: {post_title}\n"
-            f"Reddit post body: {post_body[:1500]}"
+            f"Post title: {post_title}\n"
+            f"Post body: {post_body[:1500]}"
         )
-        default = {"score": 0, "reason": "parse failure"}
-        system = SCORE_SYSTEM_ARTICLE if source_type == "substack" else SCORE_SYSTEM
+
+        if source_type == "publication":
+            system = SCORE_SYSTEM_SIGNAL
+            default = {"score": 0, "reason": "parse failure", "theme": None, "second_use": None}
+        elif source_type == "substack":
+            system = SCORE_SYSTEM_ARTICLE
+            default = {"score": 0, "reason": "parse failure"}
+        else:
+            system = SCORE_SYSTEM
+            default = {"score": 0, "reason": "parse failure"}
+
         if self.provider == "deepseek":
-            return self._call_deepseek(DEEPSEEK_MODEL, system, prompt, 150, default)
-        return self._call_claude(CLAUDE_SCORE_MODEL, system, prompt, 150, default)
+            return self._call_deepseek(DEEPSEEK_MODEL, system, prompt, 200, default)
+        return self._call_claude(CLAUDE_SCORE_MODEL, system, prompt, 200, default)
 
     def draft_reply(
         self,
@@ -91,6 +114,11 @@ class Scorer:
         source_label: str,
         source_type: str = "reddit",
     ) -> dict:
+        # Never called for source_type == "publication" -- scan.py skips
+        # drafting entirely for signal-mode items -- but guard here too.
+        if source_type == "publication":
+            return {"draft_reply": None, "self_promo_allowed": None}
+
         prompt = (
             f"Product:\n{product_description}\n\n"
             f"Brand voice:\n{brand_voice}\n\n"
@@ -133,7 +161,12 @@ class Scorer:
         if text.lower().startswith("json"):
             text = text[4:].strip()
         try:
-            return json.loads(text)
+            parsed = json.loads(text)
+            # fill in any keys the model omitted (e.g. an older-style
+            # response missing theme/second_use) so callers never KeyError
+            merged = dict(default)
+            merged.update(parsed)
+            return merged
         except json.JSONDecodeError:
             print(f"[scorer] could not parse model output: {text[:200]!r}")
             return default
