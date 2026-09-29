@@ -10,14 +10,23 @@ import requests
 SEARCH_URL = "https://hn.algolia.com/api/v1/search_by_date"
 
 
-def fetch_new_stories(keywords: list, lookback_hours: int, max_results_per_query: int = 25) -> list:
+def fetch_new_stories(
+    keywords: list,
+    lookback_hours: int,
+    max_results_per_query: int = 25,
+    exclude_terms: list | None = None,
+) -> list:
     """Search for each keyword and return new story/Show HN/Ask HN hits,
     deduped across keywords within this run. Comments are skipped --
-    top-level posts are what's worth replying to."""
+    top-level posts are what's worth replying to. Titles containing any
+    exclude_terms (case-insensitive) are dropped before they ever reach
+    the scorer, since HN's broad search otherwise returns a lot of
+    unrelated Show HN posts for generic terms like "strategy"."""
     cutoff_unix = int(
         (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=lookback_hours)).timestamp()
     )
     found = {}
+    exclude_terms = [t.lower() for t in (exclude_terms or [])]
 
     for keyword in keywords:
         params = {
@@ -35,6 +44,9 @@ def fetch_new_stories(keywords: list, lookback_hours: int, max_results_per_query
             continue
 
         for hit in hits:
+            title = (hit.get("title") or "").lower()
+            if any(term in title for term in exclude_terms):
+                continue
             found[hit["objectID"]] = hit
 
     return list(found.values())
