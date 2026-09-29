@@ -76,7 +76,7 @@ substack_feeds:
   - name: "The Digital Leader: A Big Bet Briefing on Strategy and AI"
     url: "https://thedigitalleader.substack.com/feed"
   - name: "State of AI"
-    url: "https://nathanbenaich.substack.com/feed"   
+    url: "https://nathanbenaich.substack.com/feed"
 
 # Hacker News search terms (official free Algolia API, no key needed).
 # Searches new stories, Show HN and Ask HN posts. Leave empty to skip HN.
@@ -138,16 +138,19 @@ bluesky_keywords:
 
 # Public-sector and policy publications, watched by RSS, scored as
 # "signal" (a theme worth knowing about), never as a place to reply.
-# Add more here as the audience-listener or your own reading turns up
-# good ones -- these RSS URLs are placeholders and MUST be verified
-# against each publication's real feed before the scan is run.
+# 29 Sep 2026: none of these three publish their own public RSS feed
+# anymore, so these instead use Google News's free site-search RSS
+# (https://news.google.com/rss/search?q=site:<domain>), which returns
+# that site's articles as Google has indexed them. Article links from
+# this route sometimes redirect through news.google.com rather than
+# going straight to the site -- still clickable, just one extra hop.
 publication_feeds:
   - name: "GovInsider"
-    url: "https://govinsider.asia/feed/"
+    url: "https://news.google.com/rss/search?q=site:govinsider.asia&hl=en-US&gl=US&ceid=US:en"
   - name: "Apolitical"
-    url: "https://apolitical.co/feed"
+    url: "https://news.google.com/rss/search?q=site:apolitical.co&hl=en-US&gl=US&ceid=US:en"
   - name: "Global Government Forum"
-    url: "https://www.globalgovernmentforum.com/feed/"
+    url: "https://news.google.com/rss/search?q=site:globalgovernmentforum.com&hl=en-US&gl=US&ceid=US:en"
 
 # Only posts scoring at or above this get a drafted reply (0-100).
 # Everything below still gets stored and scored, just no draft written,
