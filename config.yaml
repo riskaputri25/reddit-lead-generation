@@ -5,12 +5,12 @@
 product:
   name: Reddit lead generator
   description: >
-    Strategy Navigator is the AI engine behind Multiverz’s strategy consulting. It helps teams understand a problem, explore possible solutions, see how different people may respond, and check their thinking before moving forward. It turns this work into a structured report that can be presented to and use by a board or client.
+    Strategy Navigator is the AI engine behind Multiverz's strategy consulting. It helps teams understand a problem, explore possible solutions, see how different people may respond, and check their thinking before moving forward. It turns this work into a structured report that can be presented to and used by a board or client.
 
   brand_voice: >
-    Practitioner to practitioner, plain words, the way you'd explain it to a friend outside the field. Answer first. The reply must be useful even if SN is never mentioned. One-sentence disclosure whenever the company is mentioned.Problems are located in how strategy is usually done, never in the person asking. No hype words, em dashes, emoji, pricing, timelines, or client names.
+    Practitioner to practitioner, plain words, the way you'd explain it to a friend outside the field. Answer first. The reply must be useful even if SN is never mentioned. One-sentence disclosure whenever the company is mentioned. Problems are located in how strategy is usually done, never in the person asking. No hype words, em dashes, emoji, pricing, timelines, or client names.
 
-# Subreddits to watch 
+# Subreddits to watch
 # Reddit now requires manual API approval -- if you don't have credentials yet,
 # set this to `subreddits: []` and the scan runs on the other sources only.
 subreddits: []
@@ -35,13 +35,13 @@ keywords:
   - "market entry"
   - "positioning"
   - "ideal customer profile"
-  - "where do I even start with marketing" 
+  - "where do I even start with marketing"
   - "no traction after launch"
   - "pivot"
   - "pricing strategy"
   - "client strategy deck"
-  - "strategy deliverable" 
-  - "research for a client" 
+  - "strategy deliverable"
+  - "research for a client"
   - "competitive analysis workload"
   - "scenario planning"
   - "scaling a solo consultancy"
@@ -53,32 +53,30 @@ llm_provider: deepseek
 # Every Substack publication has one for free at <publication-url>/feed --
 # no API key needed. This only works for newsletters you name here; there's
 # no way to search all of Substack the way we search Reddit.
+# Curated 29 Sep 2026: dropped Strategy Stack (sells courses/tips, not
+# practitioner thinking), Founders Corner (fundraising audience, not ours),
+# State of AI (VC/researcher audience, not ours), Don Moynihan (right
+# readers, but framed around partisan US politics -- risk not worth it
+# given our politically-neutral rule).
 substack_feeds:
   - name: "AI as Normal Technology"
     url: "https://www.normaltech.ai/feed"
   - name: "interweave.gov"
     url: "https://interweavegov.substack.com/feed"
-  - name: "Beyond the Status Quo: Leading Public Transformation"
+  - name: "Beyond the Status Quo: Leading Public Sector Transformation"
     url: "https://aaronpercival.substack.com/feed"
-  - name: "Can We Still Govern?"
-    url: "https://donmoynihan.substack.com/feed"
-  - name: "Platforms, AI, and the Economics of BigTech"
-    url: "https://platforms.substack.com/feed"  
   - name: "GTM Strategist"
     url: "https://knowledge.gtmstrategist.com/feed"
-  - name: "The Strategy Stack"
-    url: "https://thestrategystack.substack.com/feed"
-  - name: "The Digital Leader"
-    url: "https://thedigitalleader.substack.com/feed"
-  - name: "The Founders Corner"
-    url: "https://www.the-founders-corner.com/feed"
   - name: "Import AI"
     url: "https://importai.substack.com/feed"
-  - name: "State of AI"
-    url: "https://nathanbenaich.substack.com/feed"
   - name: "AI Policy Bulletin"
     url: "https://newsletter.aipolicybulletin.org/feed"
-
+  - name: "Platforms, AI, and the Economics of BigTech"
+    url: "https://platforms.substack.com/feed"
+  - name: "The Digital Leader: A Big Bet Briefing on Strategy and AI"
+    url: "https://thedigitalleader.substack.com/feed"
+  - name: "State of AI"
+    url: "https://nathanbenaich.substack.com/feed"   
 
 # Hacker News search terms (official free Algolia API, no key needed).
 # Searches new stories, Show HN and Ask HN posts. Leave empty to skip HN.
@@ -103,6 +101,9 @@ hackernews_keywords:
   - "AI agents for research"
   - "AI decision support"
 
+# Titles containing any of these are dropped before scoring -- HN's search
+# is broad and these terms reliably signal noise unrelated to strategy
+# work (games, security research, note-taking apps, home automation, etc).
 hackernews_exclude:
   - "game"
   - "trading"
@@ -118,9 +119,40 @@ hackernews_exclude:
   - "self-hosted"
   - "home automation"
 
+# Bluesky search terms (official free public API, no key needed). Same
+# idea as Hacker News: short, plain terms people actually post, not long
+# phrases. Leave empty to skip Bluesky.
+bluesky_keywords:
+  - "go-to-market strategy"
+  - "GTM plan"
+  - "positioning"
+  - "strategy consultant"
+  - "consulting deliverable"
+  - "policy brief"
+  - "strategic foresight"
+  - "scenario planning"
+  - "AI policy"
+  - "digital government"
+  - "public sector AI"
+  - "AI for consulting"
+
+# Public-sector and policy publications, watched by RSS, scored as
+# "signal" (a theme worth knowing about), never as a place to reply.
+# Add more here as the audience-listener or your own reading turns up
+# good ones -- these RSS URLs are placeholders and MUST be verified
+# against each publication's real feed before the scan is run.
+publication_feeds:
+  - name: "GovInsider"
+    url: "https://govinsider.asia/feed/"
+  - name: "Apolitical"
+    url: "https://apolitical.co/feed"
+  - name: "Global Government Forum"
+    url: "https://www.globalgovernmentforum.com/feed/"
+
 # Only posts scoring at or above this get a drafted reply (0-100).
 # Everything below still gets stored and scored, just no draft written,
-# to keep Claude API cost down.
+# to keep Claude API cost down. Publication-feed items never get a draft
+# regardless of score -- see the mode column instead.
 score_threshold: 50
 
 # How many posts to pull per keyword search, per subreddit, per run.
