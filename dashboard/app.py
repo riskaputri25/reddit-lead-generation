@@ -38,12 +38,18 @@ def requires_auth(f):
 @app.route("/")
 @requires_auth
 def index():
+    view = request.args.get("view", "leads")
     status_filter = request.args.get("status", "new")
     conn = get_conn(DATABASE_URL)
-    status = None if status_filter == "all" else status_filter
-    leads = fetch_leads(conn, status=status)
+
+    if view == "signals":
+        leads = fetch_leads(conn, status=None, mode="signal")
+    else:
+        status = None if status_filter == "all" else status_filter
+        leads = fetch_leads(conn, status=status, mode="reply")
+
     conn.close()
-    return render_template("index.html", leads=leads, status_filter=status_filter)
+    return render_template("index.html", leads=leads, status_filter=status_filter, view=view)
 
 
 @app.route("/leads/<int:lead_id>/update", methods=["POST"])
@@ -61,7 +67,13 @@ def update(lead_id):
     update_lead(conn, lead_id, **fields)
     conn.close()
 
-    return redirect(url_for("index", status=request.args.get("status", "new")))
+    return redirect(
+        url_for(
+            "index",
+            status=request.args.get("status", "new"),
+            view=request.args.get("view", "leads"),
+        )
+    )
 
 
 if __name__ == "__main__":
