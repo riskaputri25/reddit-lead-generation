@@ -103,6 +103,21 @@ hackernews_keywords:
   - "AI agents for research"
   - "AI decision support"
 
+hackernews_exclude:
+  - "game"
+  - "trading"
+  - "crypto"
+  - "poker"
+  - "chess"
+  - "pentest"
+  - "vulnerability"
+  - "exploit"
+  - "note-taking"
+  - "notebook"
+  - "markdown editor"
+  - "self-hosted"
+  - "home automation"
+
 # Only posts scoring at or above this get a drafted reply (0-100).
 # Everything below still gets stored and scored, just no draft written,
 # to keep Claude API cost down.
