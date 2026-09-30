@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lead Pipeline — Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+{% include "_theme.html" %}
+<style>
+  .stat-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 24px;
+  }
+  .stat {
+    padding: 18px 20px;
+    border-right: 1px solid var(--border);
+  }
+  .stat:last-child { border-right: none; }
+  .stat .n {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .stat .label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  section { margin-top: 40px; }
+  section h2 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 16px;
+    color: var(--ink);
+  }
+  .chart-frame {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+    background: var(--panel);
+  }
+  .funnel { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .funnel-seg { flex: 1; padding: 16px 18px; border-right: 1px solid var(--border); }
+  .funnel-seg:last-child { border-right: none; }
+  .funnel-seg .n { font-family: 'JetBrains Mono', monospace; font-size: 1.3rem; color: var(--ink); }
+  .funnel-seg .label { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+  .theme-list { border: 1px solid var(--border); border-radius: 4px; }
+  .theme-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .theme-row:last-child { border-bottom: none; }
+  .theme-row .name { font-size: 0.9rem; }
+  .theme-row .meta { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+  .theme-row .n { font-family: 'JetBrains Mono', monospace; color: var(--ink); margin-left: 12px; }
+  .empty-note { color: var(--muted); font-size: 0.85rem; padding: 20px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Lead Pipeline</h1>
+  <div class="sub">Last 30 days, updated on each visit</div>
+  <nav>
+    <a href="/?view=leads&status=new">New</a>
+    <a href="/?view=leads&status=replied">Replied</a>
+    <a href="/?view=leads&status=skipped">Skipped</a>
+    <a href="/?view=leads&status=all">All</a>
+    <a href="/?view=signals">Signals</a>
+    <a href="/analytics" class="active">Analytics</a>
+  </nav>
+</header>
+<main>
+  <div class="stat-strip">
+    <div class="stat"><div class="n">{{ summary.total }}</div><div class="label">Total leads found</div></div>
+    <div class="stat"><div class="n">{{ summary.this_week }}</div><div class="label">Found this week</div></div>
+    <div class="stat"><div class="n">{{ summary.replied }}</div><div class="label">Replied to</div></div>
+    <div class="stat"><div class="n">{{ summary.signals }}</div><div class="label">Signals logged</div></div>
+  </div>
+
+  <section>
+    <h2>Volume by source, last 30 days</h2>
+    {% if chart_labels %}
+    <div class="chart-frame">
+      <canvas id="volumeChart" height="90"></canvas>
+    </div>
+    {% else %}
+    <div class="chart-frame empty-note">No scans recorded yet in this window. This fills in as the daily scan runs.</div>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Where reply-candidate leads stand</h2>
+    {% if status_counts %}
+    <div class="funnel">
+      <div class="funnel-seg"><div class="n">{{ status_counts.get('new', 0) }}</div><div class="label">New, unreviewed</div></div>
+      <div class="funnel-seg"><div class="n">{{ status_counts.get('replied', 0) }}</div><div class="label">Replied</div></div>
+      <div class="funnel-seg"><div class="n">{{ status_counts.get('skipped', 0) }}</div><div class="label">Skipped</div></div>
+    </div>
+    {% else %}
+    <div class="chart-frame empty-note">Nothing scored as a reply candidate yet.</div>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>What the signal feeds are surfacing</h2>
+    {% if themes %}
+    <div class="theme-list">
+      {% for t in themes %}
+      <div class="theme-row">
+        <div class="name">{{ t.theme }}</div>
+        <div>
+          <span class="meta">{{ t.second_use }}</span>
+          <span class="n">{{ t.n }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="chart-frame empty-note">No publication-feed signals logged yet.</div>
+    {% endif %}
+  </section>
+</main>
+{% if chart_labels %}
+<script>
+  const ctx = document.getElementById('volumeChart');
+  const inkMuted = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();
+  const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
+  const palette = ['#2F6F5E', '#5B6B8C', '#B4863C', '#8C6B5B', '#6B7280', '#3D5A6C'];
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: {{ chart_labels | tojson }},
+      datasets: {{ chart_datasets | tojson }}.map((d, i) => ({
+        ...d,
+        backgroundColor: palette[i % palette.length],
+        borderRadius: 2,
+      })),
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: inkMuted, font: { family: 'Inter', size: 11 } } },
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: inkMuted, font: { family: 'JetBrains Mono', size: 10 } } },
+        y: { stacked: true, grid: { color: borderColor }, ticks: { color: inkMuted, precision: 0 } },
+      },
+    },
+  });
+</script>
+{% endif %}
+</body>
+</html>
