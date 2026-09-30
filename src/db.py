@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import psycopg2
 import psycopg2.extras
 
@@ -58,3 +60,57 @@ def update_lead(conn, lead_id: int, **fields) -> None:
     with conn.cursor() as cur:
         cur.execute(f"update leads set {set_clause} where id = %s", values)
     conn.commit()
+
+
+def get_summary_stats(conn) -> dict:
+    with conn.cursor() as cur:
+        cur.execute("select count(*) from leads")
+        total = cur.fetchone()[0]
+        cur.execute("select count(*) from leads where scanned_at >= now() - interval '7 days'")
+        this_week = cur.fetchone()[0]
+        cur.execute("select count(*) from leads where status = 'replied'")
+        replied = cur.fetchone()[0]
+        cur.execute("select count(*) from leads where mode = 'signal'")
+        signals = cur.fetchone()[0]
+    return {"total": total, "this_week": this_week, "replied": replied, "signals": signals}
+
+
+def get_daily_counts(conn, days: int = 30) -> list:
+    """One row per day per source, for the last N days. Chart-shaping
+    happens in Python (app.py), not here -- this just returns raw counts."""
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            """
+            select date_trunc('day', scanned_at)::date as day,
+                   source_type,
+                   count(*) as n
+            from leads
+            where scanned_at >= now() - (%s || ' days')::interval
+            group by 1, 2
+            order by 1
+            """,
+            (days,),
+        )
+        return cur.fetchall()
+
+
+def get_status_counts(conn) -> dict:
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute("select status, count(*) as n from leads where mode = 'reply' group by status")
+        return {row["status"]: row["n"] for row in cur.fetchall()}
+
+
+def get_top_themes(conn, limit: int = 8) -> list:
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            """
+            select theme, second_use, count(*) as n
+            from leads
+            where mode = 'signal' and theme is not null
+            group by theme, second_use
+            order by n desc, theme
+            limit %s
+            """,
+            (limit,),
+        )
+        return cur.fetchall()
