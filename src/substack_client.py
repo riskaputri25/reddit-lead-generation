@@ -48,4 +48,10 @@ def fetch_new_entries(feed_url: str, lookback_hours: int) -> list:
                 continue
         fresh.append(entry)
 
+    # Always print something, even zero -- otherwise "nothing new to report"
+    # and "silently broken" look identical in the log.
+    print(
+        f"[feed] {feed_url}: {len(parsed.entries)} entries in feed, "
+        f"{len(fresh)} within the last {lookback_hours}h"
+    )
     return fresh
