@@ -9,6 +9,17 @@ import requests
 
 SEARCH_URL = "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts"
 
+# Requests' bare default identification string is a common trigger for
+# automated blocking, on any IP, home or cloud. This matches the fix that
+# resolved the same 403 pattern on Substack's feeds.
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json",
+}
+
 
 def fetch_new_posts(keywords: list, lookback_hours: int, max_results_per_query: int = 25) -> list:
     """Search for each keyword and return new post hits, deduped across
@@ -19,7 +30,7 @@ def fetch_new_posts(keywords: list, lookback_hours: int, max_results_per_query: 
     for keyword in keywords:
         params = {"q": keyword, "limit": max_results_per_query, "sort": "latest"}
         try:
-            resp = requests.get(SEARCH_URL, params=params, timeout=15)
+            resp = requests.get(SEARCH_URL, params=params, headers=HEADERS, timeout=15)
             resp.raise_for_status()
             posts = resp.json().get("posts", [])
         except requests.RequestException as e:
