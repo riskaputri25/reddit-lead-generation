@@ -3,6 +3,8 @@ free, public, and needs no key -- the same index that powers HN's own
 search box. This module fetches raw hits; normalize.py turns them into the
 common lead shape."""
 
+from __future__ import annotations
+
 import datetime as dt
 
 import requests
