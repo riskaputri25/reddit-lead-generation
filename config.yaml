@@ -162,4 +162,4 @@ score_threshold: 50
 posts_per_subreddit: 25
 
 # Only consider posts newer than this many hours (avoids re-scoring old threads).
-lookback_hours: 30
+lookback_hours: 168
